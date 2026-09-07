@@ -1,86 +1,63 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import os
 
-st.set_page_config(page_title="Etsy SEO Listing Generator", layout="wide")
+st.set_page_config(page_title="Etsy SEO Generator", layout="wide")
 
 st.title("🛍️ Fast Etsy SEO Listing Generator")
 
-# Sidebar - API Key and Inputs
+# Sidebar Configuration
 with st.sidebar:
-    st.header("📋 Product Details & Inputs")
-    
+    st.header("Product Details & Inputs")
     api_key = st.text_input("Gemini API Key", type="password")
-    if api_key:
-        genai.configure(api_key=api_key)
-    elif "GEMINI_API_KEY" in os.environ:
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-
     uploaded_file = st.file_uploader("Upload Product Image", type=["jpg", "jpeg", "png"])
     
-    if uploaded_file:
-        image = Image.open(uploaded_file)
-        # Compress image for faster API response
-        image.thumbnail((800, 800))
-        st.image(image, caption="Uploaded Image Preview", use_container_width=True)
-
     product_name = st.text_input("Product Name", "Football Theme Birthday Invitation")
-    niche_theme = st.text_input("Niche / Theme / Occasion", "Football Birthday Party")
-    editing_platform = st.selectbox("Editing Platform", ["Canva", "Corjl", "Templett", "Photoshop", "PDF/Non-editable"])
-    dimensions = st.text_input("Dimensions / Sizes", "5x7 inches, 1080x1920px")
-    recipient_age = st.text_input("Target Audience / Age", "Kids, Boys, Parents")
-    included_items = st.text_area("Included Items", "Editable 5x7 Template, Evite, PDF Guide")
-    
+    niche = st.text_input("Niche / Theme", "Football Birthday Party")
+    platform = st.selectbox("Editing Platform", ["Canva", "Photoshop", "Illustrator", "Other"])
+    dimensions = st.text_input("Dimensions / Sizes", "5x7 Inches, 1080x1920px")
+    target_audience = st.text_input("Target Audience", "Kids, Boys, Parents")
+    included_items = st.text_input("Included Items", "Editable 5x7 Template, Evite, PDF Guide")
+
     generate_btn = st.button("✨ Generate Listing Instantly")
 
-# Main Content Area
+# Main Page Processing
 if generate_btn:
-    if not uploaded_file and not product_name:
-        st.error("Please upload an image or fill in product details.")
+    if not api_key:
+        st.error("⚠️ Please enter a valid Gemini API Key first!")
+    elif not uploaded_file:
+        st.warning("⚠️ Please upload a product image.")
     else:
-        # Prompt engineered for fast execution
-        prompt = f"""
-        Act as an expert Etsy SEO copywriter. Generate a detailed, high-converting listing based on these details:
-        - Name: {product_name}
-        - Theme/Occasion: {niche_theme}
-        - Platform: {editing_platform}
-        - Dimensions: {dimensions}
-        - Target Audience/Age: {recipient_age}
-        - Included: {included_items}
-
-        Generate the following sections with clear bold headers and bullet points:
-        1. OPTIMIZED TITLE (Under 140 chars)
-        2. 13 ETSY SEO TAGS (Comma-separated, under 20 chars each)
-        3. DETAILED DESCRIPTION:
-           - 🎉 Product Overview & Occasion/Theme
-           - 📐 Dimensions, Formats & Usage
-           - 📦 Included Items
-           - 🎨 Editable Elements (Text, Fonts, Photos) vs. Fixed Elements (Graphics, Background)
-           - 💻 Platform ({editing_platform}) & Device Compatibility
-           - ⏳ Access Duration & Personal Use License
-           - 🖨️ Recommended Paper & Printing Tips (Cardstock, Home/Shop printing)
-           - 🚀 How It Works (Step-by-Step 1-5)
-           - ⚠️ Terms of Use & Digital Refund Policy
-        4. NOTE TO BUYERS (Digital Delivery Instructions)
-        """
-
         try:
+            # Configure Gemini API
+            genai.configure(api_key=api_key)
             model = genai.GenerativeModel('gemini-1.5-flash')
-            
-            # Using st.write_stream for instant streaming output
-            st.subheader("📝 Generated Listing Result:")
-            
-            if uploaded_file:
-                response = model.generate_content([prompt, image], stream=True)
-            else:
-                response = model.generate_content(prompt, stream=True)
-            
-            def stream_data():
-                for chunk in response:
-                    yield chunk.text
 
-            st.write_stream(stream_data)
+            image = Image.open(uploaded_file)
+            
+            # Prompt Engineering for High Converting Etsy Listing
+            prompt = f"""
+            You are an expert Etsy SEO Specialist. Analyze this product image and generate a complete listing based on the details below:
+            - Product Name: {product_name}
+            - Niche/Theme: {niche}
+            - Platform: {platform}
+            - Dimensions: {dimensions}
+            - Target Audience: {target_audience}
+            - Included Items: {included_items}
+
+            Provide the output in the following structure:
+            1. **Optimized Etsy Title** (Max 140 chars, high search volume keywords)
+            2. **13 High-Traffic Tags** (Comma-separated)
+            3. **Engaging Product Description** (Including features, how it works, and usage details)
+            4. **Suggested Price Range ($)**
+            """
+
+            with st.spinner("Analyzing image and generating Etsy SEO data..."):
+                response = model.generate_content([prompt, image])
+                
+            st.success("✅ Listing Generated Successfully!")
+            st.markdown("### 📝 Generated Listing Result")
+            st.write(response.text)
 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"🚨 An error occurred: {str(e)}")
