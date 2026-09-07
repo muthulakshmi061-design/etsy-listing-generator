@@ -1,4 +1,4 @@
-import streamlit as st
+    import streamlit as st
 
 st.set_page_config(page_title="Etsy SEO Generator with Image Upload", page_icon="🛍️", layout="wide")
 
@@ -12,7 +12,7 @@ st.sidebar.header("📸 Product Details & Image / உள்ளீடுகள்
 uploaded_file = st.sidebar.file_uploader("Upload Product Image / தயாரிப்புப் படத்தை பதிவேற்றவும்", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    st.sidebar.image(uploaded_file, caption="Uploaded Image Preview", use_column_width=True)
+    st.sidebar.image(uploaded_file, caption="Uploaded Image Preview", use_container_width=True)
 
 product_name = st.sidebar.text_input("Product Name / பொருளின் பெயர்", "Floral Kids Birthday Invitation")
 niche = st.sidebar.text_input("Niche / Theme", "Boho Floral Girl Birthday")
