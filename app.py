@@ -1,94 +1,115 @@
 import streamlit as st
+import google.generativeai as genai
+from PIL import Image
+import os
 
-st.set_page_config(page_title="Etsy SEO Generator with Image Upload", page_icon="🛍️", layout="wide")
+# Page Config
+st.set_page_config(page_title="Etsy SEO Listing Generator", layout="wide")
 
 st.title("🛍️ Etsy SEO Listing Generator with Image Analysis")
-st.markdown("Etsy-யின் புதிய விதிகள் மற்றும் கட்டுப்பாடுகளுக்கு ஏற்ப, உங்கள் தயாரிப்புப் படத்தை பதிவேற்றம் செய்து SEO-Optimized லிஸ்டிங் தரவுகளை உருவாக்கவும்.")
+st.write("Etsy-யின் புதிய விதிகள் மற்றும் கட்டுப்பாடுகளுக்கு ஏற்ப SEO-Optimized லிஸ்டிங் தரவுகளை உருவாக்கவும்.")
 
-# Sidebar Inputs
-st.sidebar.header("📸 Product Details & Image / உள்ளீடுகள்")
-
-# Image Upload Option
-uploaded_file = st.sidebar.file_uploader("Upload Product Image / தயாரிப்புப் படத்தை பதிவேற்றவும்", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    st.sidebar.image(uploaded_file, caption="Uploaded Image Preview", use_container_width=True)
-
-product_name = st.sidebar.text_input("Product Name / பொருளின் பெயர்", "Floral Kids Birthday Invitation")
-niche = st.sidebar.text_input("Niche / Theme", "Boho Floral Girl Birthday")
-editing_platform = st.sidebar.selectbox("Editing Platform", ["Canva", "Corjl", "Templett", "Photoshop", "PDF / Printable"])
-included_items = st.sidebar.text_area("Included Items & Sizes", "5x7 inch Invitation Template, Access Guide PDF")
-target_audience = st.sidebar.text_input("Target Audience / Recipient", "Parents, Moms, Party Planner")
-
-generate_btn = st.sidebar.button("✨ Generate Etsy Listing", type="primary")
-
-def generate_etsy_data(p_name, p_niche, p_platform, p_items, p_audience):
-    # Title Rule: Max 140 chars
-    title_raw = f"Editable {p_name}, {p_niche} Party Invite, Printable {p_audience} Download, {p_platform} Template"
-    title = title_raw[:140]
-
-    # Tags Rule: Exactly 13 tags, each <= 20 chars
-    tags_pool = [
-        f"{p_platform.lower()} template"[:20],
-        f"editable {p_name.split()[0].lower()}"[:20],
-        "digital download",
-        "instant download",
-        "printable invite",
-        "birthday invite",
-        f"{p_niche.split()[0].lower()} birthday"[:20],
-        "party template",
-        "custom invitation",
-        "diy invitation",
-        "event template",
-        "digital invite",
-        "stationery template"
-    ]
+# Sidebar - API Key and Inputs
+with st.sidebar:
+    st.header("📋 Product Details & Image / உள்ளீடுகள்")
     
-    final_tags = []
-    for tag in tags_pool:
-        clean_tag = tag.strip()[:20]
-        if clean_tag not in final_tags:
-            final_tags.append(clean_tag)
-    while len(final_tags) < 13:
-        final_tags.append("printable card"[:20])
+    api_key = st.text_input("Gemini API Key (Optional if set in environment)", type="password")
+    if api_key:
+        genai.configure(api_key=api_key)
+    elif "GEMINI_API_KEY" in os.environ:
+        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-    # Description
-    desc_first_lines = f"Create a stunning, fully customizable {p_name.lower()} in minutes! Perfect for {p_niche.lower()} celebrations."
+    uploaded_file = st.file_uploader("Upload Product Image / தயாரிப்புப் படத்தை பதிவேற்றவும்", type=["jpg", "jpeg", "png"])
     
-    desc_body = f"""
-✨ WHAT IS INCLUDED ✨
-- {p_items}
-- High-resolution digital files
+    if uploaded_file:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Uploaded Image Preview", use_container_width=True)
 
-✨ HOW IT WORKS ✨
-1. Purchase the listing on Etsy.
-2. Download the instructions file containing your edit link.
-3. Edit your design in {p_platform} using your tablet, phone, or computer.
-4. Download as PDF or JPG and print at home or via professional print shop!
-
-✨ TERMS OF USE ✨
-- For personal use only. Redistribution or resale of digital files is strictly prohibited.
-    """
+    product_name = st.text_input("Product Name / பொருளின் பெயர்", "Football Theme Birthday Invitation")
+    niche_theme = st.text_input("Niche / Theme / Occasion", "Football / Soccer Theme Birthday Party")
+    editing_platform = st.selectbox("Editing Platform", ["Canva", "Corjl", "Templett", "Photoshop", "PDF/Non-editable"])
+    dimensions = st.text_input("Dimensions / Sizes", "5x7 inches (Invitation), 1080x1920px (Mobile Evite)")
+    recipient_age = st.text_input("Target Audience / Recipient / Age", "Kids, Boys, Toddlers, Parents, Party Planners")
+    included_items = st.text_area("Included Items", "Editable 5x7 Invitation Template, Mobile Electronic Evite, Canva Access PDF Guide")
     
-    full_description = desc_first_lines + "\n" + desc_body
+    generate_btn = st.button("✨ Generate Detailed Etsy Listing")
 
-    # Note to Buyer
-    note_to_buyer = f"Thank you for your purchase! Access your file guide link to edit your {p_name} in {p_platform}. Feel free to message us via Etsy if you need assistance!"
-
-    return title, final_tags, full_description, note_to_buyer
-
+# Main Content Area
 if generate_btn:
-    title, tags, description, note = generate_etsy_data(product_name, niche, editing_platform, included_items, target_audience)
+    if not uploaded_file and not product_name:
+        st.error("Please upload an image or fill in the product details.")
+    else:
+        with st.spinner("Analyzing image and generating ultra-detailed Etsy listing..."):
 
-    st.subheader("1. Optimized Title (Max 140 Characters)")
-    st.code(title, language=None)
-    st.caption(f"Character Count: {len(title)} / 140")
+            # Highly detailed prompt covering every single requirement
+            prompt = f"""
+            You are an expert Etsy SEO and Digital Product Copywriter. 
+            Create an extremely detailed, highly structured, professional, and conversion-focused Etsy Listing Description based on the provided image and inputs.
 
-    st.subheader("2. Etsy SEO Tags (13 Tags, Max 20 Chars Each)")
-    st.write(", ".join([f"`{t}`" for t in tags]))
+            PRODUCT INPUT DETAILS:
+            - Product Name: {product_name}
+            - Niche / Theme / Occasion: {niche_theme}
+            - Editing Platform: {editing_platform}
+            - Dimensions / Size: {dimensions}
+            - Target Audience / Recipient / Age Group: {recipient_age}
+            - Included Items: {included_items}
 
-    st.subheader("3. Listing Description")
-    st.text_area("Copy Description Below", value=description, height=300)
+            OUTPUT REQUIREMENTS:
 
-    st.subheader("4. Note to Buyers (Digital Delivery)")
-    st.info(note)
+            1. OPTIMIZED TITLE (Strictly under 140 characters):
+               High-search-volume keywords separated by commas or vertical bars.
+
+            2. ETSY SEO TAGS:
+               Exactly 13 tags, each strictly under 20 characters, comma-separated.
+
+            3. ULTRA-DETAILED LISTING DESCRIPTION:
+               Structure the description using bold headings, clean bullet points, and clear sections as follows:
+
+               - 🎉 PRODUCT OVERVIEW & OCCASION / THEME:
+                 Highlight the event/occasion, design style, and ideal recipient/age group.
+
+               - 📐 DIMENSIONS & FORMAT:
+                 Specify precise template dimensions, file formats (PDF, JPG, PNG), and digital download delivery type.
+
+               - 📦 WHAT IS INCLUDED:
+                 Itemize every template, size, mobile/digital version, and instruction PDF included in the purchase.
+
+               - 🎨 EDITABLE vs. FIXED ELEMENTS:
+                 - What CAN be edited: (e.g., text, font style, font size, text color, background color, photo placement if applicable).
+                 - What CANNOT be edited: (e.g., fixed graphics, artwork, overall layout size/orientation).
+
+               - 💻 EDITING PLATFORM & DEVICE COMPATIBILITY:
+                 Detail the software required ({editing_platform}), account type needed (e.g., Free or Pro), and supported devices (Computer/Laptop recommended, Tablet/Mobile capability).
+
+               - ⏳ ACCESS DURATION & USAGE:
+                 Lifetime access, unlimited edits and downloads for personal use.
+
+               - 🖨️ RECOMMENDED PAPER & PRINTING TIPS:
+                 Best paper type (e.g., Heavyweight Cardstock 100lb+, Glossy/Matte finishes), printing options (Home printer, Local print shop, Online printing services).
+
+               - 🚀 HOW IT WORKS (STEP-BY-STEP):
+                 1. Purchase & Instant Access
+                 2. Open PDF Guide with Template Links
+                 3. Edit in {editing_platform}
+                 4. Save/Download (PDF for print, JPG/PNG for digital sending)
+                 5. Print or send digitally!
+
+               - ⚠️ TERMS OF USE & REFUND POLICY:
+                 Personal use only, no resale/redistribution, digital nature policy (no physical item shipped, no returns/refunds).
+
+            4. NOTE TO BUYERS (Digital Delivery Instructions).
+            """
+
+            try:
+                # Using Gemini Vision model
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                if uploaded_file:
+                    response = model.generate_content([prompt, image])
+                else:
+                    response = model.generate_content(prompt)
+                    
+                st.markdown(response.text)
+
+            except Exception as e:
+                st.error(f"Error generating listing: {e}")
